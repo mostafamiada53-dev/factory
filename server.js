@@ -41,8 +41,10 @@ const MACHINES = {
 
 const PROCESS_NAMES = {
   PA0050: "تركيب كمر فولدر",
-  PB000030: "فارماتورة جيب خلفى *4",
-  PB000031: "فارماتورة جيب خلفي هلال*4",
+
+  PB0030: "فارماتورة جيب خلفى *4",
+  PB0031: "فارماتورة جيب خلفي هلال*4",
+
   PC0119: "تثبيت جيب عمله علي الخياله من اعلي",
   PC0346: "مللى تركيب بطانه على السوسته اتجاه",
   PC0044: "تثبيت+رد بطانه جيب العمله",
@@ -62,7 +64,6 @@ const PROCESS_NAMES = {
   PC0352: "مللى تركيب بطانه على الفودرة+تثبيت",
   PC0042: "ثنى جيب عمله ابرة واحدة (عاديه)"
 };
-
 /* =========================================================
    CURRENT READING MODEL
 ========================================================= */
@@ -150,28 +151,15 @@ const CurrentReading = mongoose.model(
 
 const processRecordSchema = new mongoose.Schema(
   {
-    machineId: {
-      type: String,
+    machine: {
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
       index: true
     },
 
-    processId: {
-      type: String,
+    process: {
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
-      index: true
-    },
-
-    deviceMac: {
-      type: String,
-      index: true
-    },
-
-    machineType: String,
-    processName: String,
-
-    date: {
-      type: String,
       index: true
     },
 
@@ -185,11 +173,6 @@ const processRecordSchema = new mongoose.Schema(
       type: Date,
       required: true,
       index: true
-    },
-
-    duration: {
-      type: Number,
-      required: true
     }
   },
   {
@@ -199,7 +182,12 @@ const processRecordSchema = new mongoose.Schema(
 );
 
 processRecordSchema.index({
-  machineId: 1,
+  machine: 1,
+  startTimestamp: -1
+});
+
+processRecordSchema.index({
+  process: 1,
   startTimestamp: -1
 });
 
@@ -341,13 +329,6 @@ function getDayRange(date) {
   };
 }
 
-function clamp(value, min, max) {
-  return Math.max(
-    min,
-    Math.min(max, value)
-  );
-}
-
 function machineCodeFromMac(mac) {
   const normalized =
     normalizeMac(mac);
@@ -419,164 +400,6 @@ function addProcess(
   }
 }
 
-function extractProcessesFromAssignment(
-  assignment,
-  processMap
-) {
-  if (
-    !assignment ||
-    typeof assignment !== "object"
-  ) {
-    return;
-  }
-
-  const codes =
-    Array.isArray(
-      assignment.standardProcessCodes
-    )
-      ? assignment.standardProcessCodes
-      : [];
-
-  codes.forEach(code =>
-    addProcess(
-      processMap,
-      code
-    )
-  );
-
-  const processIds =
-    Array.isArray(
-      assignment.processIds
-    )
-      ? assignment.processIds
-      : [];
-
-  processIds.forEach(id =>
-    addProcess(
-      processMap,
-      id
-    )
-  );
-
-  const standardIds =
-    Array.isArray(
-      assignment.standardProcessIds
-    )
-      ? assignment.standardProcessIds
-      : [];
-
-  standardIds.forEach(id =>
-    addProcess(
-      processMap,
-      id
-    )
-  );
-
-  const scanCandidates = [
-    assignment.processesPerScan,
-    assignment.processScanSequence
-  ];
-
-  for (
-    const candidate
-    of scanCandidates
-  ) {
-    if (!candidate) continue;
-
-    if (Array.isArray(candidate)) {
-      for (
-        const item
-        of candidate
-      ) {
-        if (
-          typeof item === "string"
-        ) {
-          addProcess(
-            processMap,
-            item
-          );
-        } else if (
-          item &&
-          typeof item === "object"
-        ) {
-          addProcess(
-            processMap,
-            item.processId ??
-              item.standardProcessId ??
-              item.processCode ??
-              item.code ??
-              item.id
-          );
-        }
-      }
-    } else if (
-      typeof candidate === "object"
-    ) {
-      for (
-        const [key, value]
-        of Object.entries(candidate)
-      ) {
-        if (
-          typeof key === "string"
-        ) {
-          addProcess(
-            processMap,
-            key
-          );
-        }
-
-        if (
-          typeof value === "string"
-        ) {
-          addProcess(
-            processMap,
-            value
-          );
-        } else if (
-          Array.isArray(value)
-        ) {
-          value.forEach(v => {
-            if (
-              typeof v === "string"
-            ) {
-              addProcess(
-                processMap,
-                v
-              );
-            } else if (
-              v &&
-              typeof v === "object"
-            ) {
-              addProcess(
-                processMap,
-                v.processId ??
-                  v.standardProcessId ??
-                  v.processCode ??
-                  v.code ??
-                  v.id
-              );
-            }
-          });
-        }
-      }
-    }
-  }
-}
-
-function processIdsMatch(a, b) {
-  const aa =
-    cleanProcessId(a);
-
-  const bb =
-    cleanProcessId(b);
-
-  if (!aa || !bb) {
-    return false;
-  }
-
-  return aa === bb;
-}
-
 function calculateDuration(
   start,
   end
@@ -620,6 +443,7 @@ app.get(
     req,
     res
   ) => {
+
     res.json({
       success: true,
       server: "FACTORY APP",
@@ -636,6 +460,7 @@ app.get(
       time:
         new Date().toISOString()
     });
+
   }
 );
 
@@ -664,6 +489,7 @@ app.get(
           message:
             "deviceMac is required"
         });
+
       }
 
       const now =
@@ -701,6 +527,7 @@ app.get(
           isFresh: false,
           points: []
         });
+
       }
 
       const baseTimestamp =
@@ -736,6 +563,7 @@ app.get(
             value,
             index
           ) => ({
+
             time:
               new Date(
                 baseTimestamp -
@@ -749,6 +577,7 @@ app.get(
 
             current:
               Number(value)
+
           })
         );
 
@@ -791,6 +620,7 @@ app.get(
             : null,
 
         latestReading: {
+
           current,
 
           time:
@@ -801,12 +631,14 @@ app.get(
                   timestampMs
                 ).toISOString()
               : null
+
         },
 
         sampleCount:
           samples.length,
 
         points
+
       });
 
     } catch (error) {
@@ -821,13 +653,14 @@ app.get(
         message:
           error.message
       });
+
     }
+
   }
 );
 
 /* =========================================================
    HISTORICAL OPTIONS
-   OPTIMIZED VERSION
 ========================================================= */
 
 app.get(
@@ -845,16 +678,13 @@ app.get(
           ""
         ).trim();
 
-      if (
-        !isValidDate(date)
-      ) {
+      if (!isValidDate(date)) {
 
         return res
           .status(400)
           .json({
 
-            success:
-              false,
+            success: false,
 
             message:
               "date must be YYYY-MM-DD",
@@ -862,58 +692,24 @@ app.get(
             machineCount:
               0,
 
-            machines:
-              [],
+            machines: [],
 
             processesByMachine:
               {}
+
           });
+
       }
 
       const {
         start,
         end
       } =
-        getDayRange(
-          date
-        );
-
-      console.log("");
-      console.log(
-        "========================================"
-      );
-
-      console.log(
-        "📋 HISTORICAL OPTIONS REQUEST"
-      );
-
-      console.log(
-        "Date:",
-        date
-      );
-
-      console.log(
-        "Range:",
-        start.toISOString(),
-        "→",
-        end.toISOString()
-      );
-
-      /* =====================================================
-         IMPORTANT
-
-         Instead of loading tens of thousands of complete
-         assignments into Node, MongoDB extracts only the
-         process codes we need.
-      ===================================================== */
+        getDayRange(date);
 
       const groupedDevices =
         await CurrentReading.aggregate(
           [
-
-            /* -----------------------------------------------
-               MATCH SELECTED DAY
-            ------------------------------------------------ */
 
             {
               $match: {
@@ -928,6 +724,7 @@ app.get(
 
                       $lt:
                         end
+
                     }
                   },
 
@@ -942,15 +739,14 @@ app.get(
 
                       $lt:
                         end
+
                     }
                   }
+
                 ]
+
               }
             },
-
-            /* -----------------------------------------------
-               ONLY NEEDED FIELDS
-            ------------------------------------------------ */
 
             {
               $project: {
@@ -960,12 +756,9 @@ app.get(
 
                 assignments:
                   "$context.assignments"
+
               }
             },
-
-            /* -----------------------------------------------
-               ONLY OUR MACHINES
-            ------------------------------------------------ */
 
             {
               $match: {
@@ -981,25 +774,22 @@ app.get(
                           machine.mac
                         )
                     )
-                }
-              }
-            },
 
-            /* -----------------------------------------------
-               ONE ASSIGNMENT AT A TIME
-            ------------------------------------------------ */
+                }
+
+              }
+
+            },
 
             {
               $unwind: {
 
                 path:
                   "$assignments"
-              }
-            },
 
-            /* -----------------------------------------------
-               ONLY STANDARD PROCESS CODES
-            ------------------------------------------------ */
+              }
+
+            },
 
             {
               $project: {
@@ -1009,24 +799,20 @@ app.get(
 
                 processCodes:
                   "$assignments.standardProcessCodes"
-              }
-            },
 
-            /* -----------------------------------------------
-               ONE PROCESS CODE AT A TIME
-            ------------------------------------------------ */
+              }
+
+            },
 
             {
               $unwind: {
 
                 path:
                   "$processCodes"
-              }
-            },
 
-            /* -----------------------------------------------
-               REMOVE EMPTY PROCESS CODES
-            ------------------------------------------------ */
+              }
+
+            },
 
             {
               $match: {
@@ -1037,13 +823,12 @@ app.get(
                     null,
                     ""
                   ]
-                }
-              }
-            },
 
-            /* -----------------------------------------------
-               UNIQUE MACHINE + PROCESS
-            ------------------------------------------------ */
+                }
+
+              }
+
+            },
 
             {
               $group: {
@@ -1055,13 +840,12 @@ app.get(
 
                   processCode:
                     "$processCodes"
-                }
-              }
-            },
 
-            /* -----------------------------------------------
-               GROUP BY MACHINE
-            ------------------------------------------------ */
+                }
+
+              }
+
+            },
 
             {
               $group: {
@@ -1073,8 +857,11 @@ app.get(
 
                   $addToSet:
                     "$_id.processCode"
+
                 }
+
               }
+
             }
 
           ],
@@ -1084,24 +871,11 @@ app.get(
           }
         );
 
-      console.log(
-        "Unique devices found:",
-        groupedDevices.length
-      );
-
-      /* =====================================================
-         MAPS
-      ===================================================== */
-
       const machinesMap =
         new Map();
 
       const processesByMachine =
         new Map();
-
-      /* =====================================================
-         LOOP DEVICES
-      ===================================================== */
 
       for (
         const device
@@ -1127,10 +901,6 @@ app.get(
             machineCode
           ];
 
-        /* ---------------------------------------------------
-           MACHINE
-        --------------------------------------------------- */
-
         if (
           !machinesMap.has(
             machineCode
@@ -1152,13 +922,11 @@ app.get(
 
               deviceMac:
                 machine.mac
+
             }
           );
-        }
 
-        /* ---------------------------------------------------
-           PROCESS MAP
-        --------------------------------------------------- */
+        }
 
         if (
           !processesByMachine.has(
@@ -1170,16 +938,13 @@ app.get(
             machineCode,
             new Map()
           );
+
         }
 
         const processMap =
           processesByMachine.get(
             machineCode
           );
-
-        /* ---------------------------------------------------
-           PROCESS CODES
-        --------------------------------------------------- */
 
         const processCodes =
           Array.isArray(
@@ -1197,12 +962,10 @@ app.get(
             processMap,
             processCode
           );
-        }
-      }
 
-      /* =====================================================
-         FINAL MACHINES
-      ===================================================== */
+        }
+
+      }
 
       const machines =
         Array
@@ -1218,10 +981,6 @@ app.get(
                 b.machineId
               )
           );
-
-      /* =====================================================
-         FINAL PROCESSES
-      ===================================================== */
 
       const finalProcesses = {};
 
@@ -1252,83 +1011,29 @@ app.get(
                   b.processId
                 )
             );
+
       }
-
-      /* =====================================================
-         LOG
-      ===================================================== */
-
-      console.log(
-        "Machines:",
-        machines.length
-      );
-
-      machines.forEach(
-        machine => {
-
-          console.log(
-            "Machine:",
-            machine.machineId,
-            "| MAC:",
-            machine.deviceMac,
-            "| Type:",
-            machine.machineType,
-            "| Processes:",
-            (
-              finalProcesses[
-                machine.machineId
-              ] ||
-              []
-            ).length
-          );
-
-          (
-            finalProcesses[
-              machine.machineId
-            ] ||
-            []
-          ).forEach(
-            process => {
-
-              console.log(
-                "   Process:",
-                process.processId,
-                "| Name:",
-                process.name
-              );
-            }
-          );
-        }
-      );
-
-      console.log(
-        "========================================"
-      );
-
-      console.log("");
 
       return res.json({
 
-        success:
-          true,
+        success: true,
 
-        date:
-          date,
+        date,
 
         machineCount:
           machines.length,
 
-        machines:
-          machines,
+        machines,
 
         processesByMachine:
           finalProcesses
+
       });
 
     } catch (error) {
 
       console.error(
-        "❌ HISTORICAL OPTIONS ERROR:",
+        "HISTORICAL OPTIONS ERROR:",
         error
       );
 
@@ -1336,8 +1041,7 @@ app.get(
         .status(500)
         .json({
 
-          success:
-            false,
+          success: false,
 
           message:
             error.message,
@@ -1345,19 +1049,21 @@ app.get(
           machineCount:
             0,
 
-          machines:
-            [],
+          machines: [],
 
           processesByMachine:
             {}
+
         });
+
     }
+
   }
 );
 
 /* =========================================================
    HISTORICAL WAVE
-   READ ONLY FROM MONGODB
+   FILTER BY MACHINE + DATE + PROCESS
 ========================================================= */
 
 app.get(
@@ -1378,7 +1084,17 @@ app.get(
         String(
           req.query.date ||
           ""
-        );
+        ).trim();
+
+      const processCode =
+        String(
+          req.query.processCode ||
+          ""
+        ).trim();
+
+      /* ---------------------------------------------------
+         VALIDATION
+      --------------------------------------------------- */
 
       if (!deviceMac) {
 
@@ -1387,24 +1103,42 @@ app.get(
           message:
             "deviceMac is required"
         });
+
       }
 
-      if (
-        !isValidDate(date)
-      ) {
+      if (!isValidDate(date)) {
 
         return res.status(400).json({
           success: false,
           message:
             "date must be YYYY-MM-DD"
         });
+
       }
+
+      if (!processCode) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "processCode is required"
+        });
+
+      }
+
+      /* ---------------------------------------------------
+         DAY RANGE
+      --------------------------------------------------- */
 
       const {
         start,
         end
       } =
         getDayRange(date);
+
+      /* ---------------------------------------------------
+         RESOLUTION
+      --------------------------------------------------- */
 
       const requestedResolution =
         Number(
@@ -1413,16 +1147,37 @@ app.get(
           0
         );
 
+      /* ---------------------------------------------------
+         COUNT READINGS FOR PROCESS
+      --------------------------------------------------- */
+
       const count =
         await CurrentReading.countDocuments({
+
           "metadata.deviceMac":
             deviceMac,
 
           timestamp: {
             $gte: start,
             $lt: end
+          },
+
+          "context.assignments": {
+
+            $elemMatch: {
+
+              standardProcessCodes:
+                processCode
+
+            }
+
           }
+
         });
+
+      /* ---------------------------------------------------
+         BUCKET SIZE
+      --------------------------------------------------- */
 
       let bucketSeconds;
 
@@ -1439,31 +1194,40 @@ app.get(
 
       } else {
 
-        if (
-          count <= 2000
-        ) {
+        if (count <= 2000) {
+
           bucketSeconds = 1;
-        } else if (
-          count <= 10000
-        ) {
+
+        } else if (count <= 10000) {
+
           bucketSeconds = 5;
-        } else if (
-          count <= 30000
-        ) {
+
+        } else if (count <= 30000) {
+
           bucketSeconds = 10;
-        } else if (
-          count <= 100000
-        ) {
+
+        } else if (count <= 100000) {
+
           bucketSeconds = 30;
+
         } else {
+
           bucketSeconds = 60;
+
         }
+
       }
 
       const bucketMs =
         bucketSeconds * 1000;
 
+      /* ---------------------------------------------------
+         HISTORICAL PIPELINE
+      --------------------------------------------------- */
+
       const pipeline = [
+
+        /* MACHINE + DATE */
 
         {
           $match: {
@@ -1472,11 +1236,40 @@ app.get(
               deviceMac,
 
             timestamp: {
+
               $gte: start,
+
               $lt: end
+
             }
+
           }
+
         },
+
+        /* SELECTED PROCESS */
+
+        {
+          $match: {
+
+            "context.assignments":
+
+              {
+
+                $elemMatch: {
+
+                  standardProcessCodes:
+                    processCode
+
+                }
+
+              }
+
+          }
+
+        },
+
+        /* CURRENT VALUE */
 
         {
           $project: {
@@ -1484,71 +1277,69 @@ app.get(
             timestamp: 1,
 
             avgValue: {
+
               $avg:
                 "$samples"
+
             }
+
           }
+
         },
+
+        /* REMOVE INVALID VALUES */
 
         {
           $match: {
 
             avgValue: {
+
               $ne: null
+
             }
+
           }
+
         },
+
+        /* TIME BUCKET */
 
         {
           $project: {
 
-            bucket: {
-              $toDate: {
-
-                $multiply: [
-
-                  {
-                    $floor: {
-
-                      $divide: [
-
-                        {
-                          $subtract: [
-                            "$timestamp",
-                            start
-                          ]
-                        },
-
-                        bucketMs
-                      ]
-                    }
-                  },
-
-                  bucketMs
-                ]
-              }
-            },
-
             relativeBucket: {
+
               $floor: {
 
                 $divide: [
 
                   {
+
                     $subtract: [
+
                       "$timestamp",
+
                       start
+
                     ]
+
                   },
 
                   bucketMs
+
                 ]
+
               }
+
             },
 
             avgValue: 1
+
           }
+
         },
+
+        /* GROUP */
 
         {
           $group: {
@@ -1557,17 +1348,28 @@ app.get(
               "$relativeBucket",
 
             avgValue: {
+
               $avg:
                 "$avgValue"
+
             }
+
           }
+
         },
+
+        /* SORT */
 
         {
           $sort: {
+
             _id: 1
+
           }
+
         },
+
+        /* FINAL POINT */
 
         {
           $project: {
@@ -1593,14 +1395,20 @@ app.get(
                     bucketMs
 
                   ]
+
                 }
+
               }
+
             },
 
             current:
               "$avgValue"
+
           }
+
         }
+
       ];
 
       const rows =
@@ -1617,6 +1425,7 @@ app.get(
         rows
           .map(
             row => ({
+
               time:
                 new Date(
                   row.timestamp
@@ -1626,12 +1435,13 @@ app.get(
                 Number(
                   row.current
                 )
+
             })
           )
           .filter(
-            p =>
+            point =>
               Number.isFinite(
-                p.current
+                point.current
               )
           );
 
@@ -1643,6 +1453,8 @@ app.get(
 
         date,
 
+        processCode,
+
         packetCount:
           count,
 
@@ -1652,6 +1464,7 @@ app.get(
           points.length,
 
         points
+
       });
 
     } catch (error) {
@@ -1662,21 +1475,25 @@ app.get(
       );
 
       return res.status(500).json({
+
         success: false,
+
         message:
           error.message
+
       });
+
     }
+
   }
 );
 
 /* =========================================================
-   SAVE PIECE
-   METADATA ONLY
+   PROCESS PIECE RECORD
 ========================================================= */
 
 app.post(
-  "/api/save-piece",
+  "/api/process-piece-records",
   async (
     req,
     res
@@ -1687,197 +1504,191 @@ app.post(
       const body =
         req.body || {};
 
-      const machineId =
+      const machine =
         String(
-          body.machineId ||
           body.machine ||
-          body.machineCode ||
           ""
         ).trim();
 
-      const processId =
+      const process =
         String(
-          body.processId ||
           body.process ||
-          body.processCode ||
           ""
         ).trim();
 
-      const deviceMac =
-        normalizeMac(
-          body.deviceMac
-        );
-
-      const machineType =
-        String(
-          body.machineType ||
-          ""
-        ).trim();
-
-      const processName =
-        String(
-          body.processName ||
-          PROCESS_NAMES[
-            processId
-          ] ||
-          ""
-        ).trim();
-
-      const date =
-        String(
-          body.date ||
-          ""
-        ).trim();
-
-      const startTime =
-        body.startTime ||
+      const startTimestamp =
         body.startTimestamp;
 
-      const endTime =
-        body.endTime ||
+      const endTimestamp =
         body.endTimestamp;
 
-      if (!machineId) {
+      /* ---------------------------------------------------
+         VALIDATION
+      --------------------------------------------------- */
+
+      if (!machine) {
 
         return res.status(400).json({
           success: false,
           message:
-            "machineId is required"
+            "machine is required"
         });
+
       }
 
-      if (!processId) {
+      if (!process) {
 
         return res.status(400).json({
           success: false,
           message:
-            "processId is required"
+            "process is required"
         });
+
       }
 
       if (
-        !startTime ||
-        !endTime
+        !startTimestamp ||
+        !endTimestamp
       ) {
 
         return res.status(400).json({
           success: false,
           message:
-            "startTime and endTime are required"
+            "startTimestamp and endTimestamp are required"
         });
+
       }
 
-      const duration =
-        calculateDuration(
-          startTime,
-          endTime
+      const start =
+        new Date(
+          startTimestamp
         );
 
-      const derivedDate =
-        isValidDate(date)
-          ? date
-          : new Date(
-              startTime
-            )
-              .toISOString()
-              .slice(0, 10);
+      const end =
+        new Date(
+          endTimestamp
+        );
+
+      if (
+        !Number.isFinite(
+          start.getTime()
+        ) ||
+        !Number.isFinite(
+          end.getTime()
+        )
+      ) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid startTimestamp or endTimestamp"
+        });
+
+      }
+
+      if (
+        end.getTime() <=
+        start.getTime()
+      ) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "endTimestamp must be after startTimestamp"
+        });
+
+      }
+
+      /* ---------------------------------------------------
+         SAVE RECORD
+      --------------------------------------------------- */
 
       const record =
         await ProcessRecord.create({
 
-          machineId,
+          machine,
 
-          processId,
-
-          deviceMac,
-
-          machineType,
-
-          processName,
-
-          date:
-            derivedDate,
+          process,
 
           startTimestamp:
-            new Date(
-              startTime
-            ),
+            start,
 
           endTimestamp:
-            new Date(
-              endTime
-            ),
+            end
 
-          duration
         });
 
-      return res.json({
+      /* ---------------------------------------------------
+         RESPONSE
+      --------------------------------------------------- */
+
+      return res.status(201).json({
 
         success: true,
 
-        message:
-          "Piece metadata saved successfully",
+        data: {
 
-        record: {
-
-          id:
+          _id:
             String(
               record._id
             ),
 
-          machineId:
-            record.machineId,
+          machine:
+            String(
+              record.machine
+            ),
 
-          processId:
-            record.processId,
+          process:
+            String(
+              record.process
+            ),
 
-          deviceMac:
-            record.deviceMac,
-
-          machineType:
-            record.machineType,
-
-          processName:
-            record.processName,
-
-          date:
-            record.date,
-
-          startTime:
+          startTimestamp:
             record.startTimestamp
               .toISOString(),
 
-          endTime:
+          endTimestamp:
             record.endTimestamp
               .toISOString(),
 
-          duration:
-            record.duration
+          createdAt:
+            record.createdAt
+              .toISOString(),
+
+          updatedAt:
+            record.updatedAt
+              .toISOString()
+
         }
+
       });
 
     } catch (error) {
 
       console.error(
-        "SAVE PIECE ERROR:",
+        "PROCESS PIECE RECORD ERROR:",
         error
       );
 
       return res.status(500).json({
+
         success: false,
+
         message:
           error.message
+
       });
+
     }
+
   }
 );
-
 /* =========================================================
-   PROCESS RECORDS
+   PROCESS PIECE RECORDS
 ========================================================= */
 
 app.get(
-  "/api/process-records",
+  "/api/process-piece-records",
   async (
     req,
     res
@@ -1887,25 +1698,39 @@ app.get(
 
       const filter = {};
 
-      if (
-        req.query.machineId
-      ) {
-
-        filter.machineId =
-          String(
-            req.query.machineId
-          );
-      }
+      /* ---------------------------------------------------
+         MACHINE
+      --------------------------------------------------- */
 
       if (
-        req.query.processId
+        req.query.machine
       ) {
 
-        filter.processId =
+        filter.machine =
           String(
-            req.query.processId
-          );
+            req.query.machine
+          ).trim();
+
       }
+
+      /* ---------------------------------------------------
+         PROCESS
+      --------------------------------------------------- */
+
+      if (
+        req.query.process
+      ) {
+
+        filter.process =
+          String(
+            req.query.process
+          ).trim();
+
+      }
+
+      /* ---------------------------------------------------
+         DATE
+      --------------------------------------------------- */
 
       if (
         isValidDate(
@@ -1928,8 +1753,14 @@ app.get(
 
           $lt:
             end
+
         };
+
       }
+
+      /* ---------------------------------------------------
+         GET RECORDS
+      --------------------------------------------------- */
 
       const records =
         await ProcessRecord
@@ -1944,79 +1775,80 @@ app.get(
 
         success: true,
 
-        records:
+        data:
           records.map(
-            r => ({
+            record => ({
 
-              id:
+              _id:
                 String(
-                  r._id
+                  record._id
                 ),
 
-              machineId:
-                r.machineId,
+              machine:
+                String(
+                  record.machine
+                ),
 
-              processId:
-                r.processId,
+              process:
+                String(
+                  record.process
+                ),
 
-              deviceMac:
-                r.deviceMac,
-
-              machineType:
-                r.machineType,
-
-              processName:
-                r.processName,
-
-              date:
-                r.date,
-
-              startTime:
-                r.startTimestamp
-                  ? r.startTimestamp
+              startTimestamp:
+                record.startTimestamp
+                  ? record.startTimestamp
                       .toISOString()
                   : null,
 
-              endTime:
-                r.endTimestamp
-                  ? r.endTimestamp
+              endTimestamp:
+                record.endTimestamp
+                  ? record.endTimestamp
                       .toISOString()
                   : null,
-
-              duration:
-                r.duration,
 
               createdAt:
-                r.createdAt,
+                record.createdAt
+                  ? record.createdAt
+                      .toISOString()
+                  : null,
 
               updatedAt:
-                r.updatedAt
+                record.updatedAt
+                  ? record.updatedAt
+                      .toISOString()
+                  : null
+
             })
           )
+
       });
 
     } catch (error) {
 
       console.error(
-        "PROCESS RECORDS GET ERROR:",
+        "PROCESS PIECE RECORDS GET ERROR:",
         error
       );
 
       return res.status(500).json({
+
         success: false,
+
         message:
           error.message
+
       });
+
     }
+
   }
 );
-
 /* =========================================================
-   GET PROCESS RECORD BY ID
+   GET PROCESS PIECE RECORD BY ID
 ========================================================= */
 
 app.get(
-  "/api/process-records/:id",
+  "/api/process-piece-records/:id",
   async (
     req,
     res
@@ -2031,96 +1863,111 @@ app.get(
       ) {
 
         return res.status(400).json({
+
           success: false,
+
           message:
             "Invalid record id"
+
         });
+
       }
 
-      const r =
+      const record =
         await ProcessRecord
           .findById(
             req.params.id
           )
           .lean();
 
-      if (!r) {
+      if (!record) {
 
         return res.status(404).json({
+
           success: false,
+
           message:
             "Record not found"
+
         });
+
       }
 
       return res.json({
 
         success: true,
 
-        record: {
+        data: {
 
-          id:
+          _id:
             String(
-              r._id
+              record._id
             ),
 
-          machineId:
-            r.machineId,
+          machine:
+            String(
+              record.machine
+            ),
 
-          processId:
-            r.processId,
+          process:
+            String(
+              record.process
+            ),
 
-          deviceMac:
-            r.deviceMac,
+          startTimestamp:
+            record.startTimestamp
+              ? record.startTimestamp
+                  .toISOString()
+              : null,
 
-          machineType:
-            r.machineType,
-
-          processName:
-            r.processName,
-
-          date:
-            r.date,
-
-          startTime:
-            r.startTimestamp?.toISOString(),
-
-          endTime:
-            r.endTimestamp?.toISOString(),
-
-          duration:
-            r.duration,
+          endTimestamp:
+            record.endTimestamp
+              ? record.endTimestamp
+                  .toISOString()
+              : null,
 
           createdAt:
-            r.createdAt,
+            record.createdAt
+              ? record.createdAt
+                  .toISOString()
+              : null,
 
           updatedAt:
-            r.updatedAt
+            record.updatedAt
+              ? record.updatedAt
+                  .toISOString()
+              : null
+
         }
+
       });
 
     } catch (error) {
 
       console.error(
-        "PROCESS RECORD GET ERROR:",
+        "PROCESS PIECE RECORD GET ERROR:",
         error
       );
 
       return res.status(500).json({
+
         success: false,
+
         message:
           error.message
+
       });
+
     }
+
   }
 );
-
 /* =========================================================
-   UPDATE PROCESS RECORD
+   UPDATE PROCESS PIECE RECORD
 ========================================================= */
 
 app.put(
-  "/api/process-records/:id",
+  "/api/process-piece-records/:id",
   async (
     req,
     res
@@ -2135,37 +1982,83 @@ app.put(
       ) {
 
         return res.status(400).json({
+
           success: false,
+
           message:
             "Invalid record id"
+
         });
+
       }
 
-      const startTime =
-        req.body.startTime ||
+      const startTimestamp =
         req.body.startTimestamp;
 
-      const endTime =
-        req.body.endTime ||
+      const endTimestamp =
         req.body.endTimestamp;
 
       if (
-        !startTime ||
-        !endTime
+        !startTimestamp ||
+        !endTimestamp
       ) {
 
         return res.status(400).json({
+
           success: false,
+
           message:
-            "startTime and endTime are required"
+            "startTimestamp and endTimestamp are required"
+
         });
+
       }
 
-      const duration =
-        calculateDuration(
-          startTime,
-          endTime
+      const start =
+        new Date(
+          startTimestamp
         );
+
+      const end =
+        new Date(
+          endTimestamp
+        );
+
+      if (
+        !Number.isFinite(
+          start.getTime()
+        ) ||
+        !Number.isFinite(
+          end.getTime()
+        )
+      ) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          message:
+            "Invalid startTimestamp or endTimestamp"
+
+        });
+
+      }
+
+      if (
+        end.getTime() <=
+        start.getTime()
+      ) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          message:
+            "endTimestamp must be after startTimestamp"
+
+        });
+
+      }
 
       const updated =
         await ProcessRecord
@@ -2175,17 +2068,13 @@ app.put(
               $set: {
 
                 startTimestamp:
-                  new Date(
-                    startTime
-                  ),
+                  start,
 
                 endTimestamp:
-                  new Date(
-                    endTime
-                  ),
+                  end
 
-                duration
               }
+
             },
             {
               new: true,
@@ -2197,123 +2086,79 @@ app.put(
       if (!updated) {
 
         return res.status(404).json({
+
           success: false,
+
           message:
             "Record not found"
+
         });
+
       }
 
       return res.json({
 
         success: true,
 
-        message:
-          "Record updated",
+        data: {
 
-        record: {
-
-          id:
+          _id:
             String(
               updated._id
             ),
 
-          machineId:
-            updated.machineId,
+          machine:
+            String(
+              updated.machine
+            ),
 
-          processId:
-            updated.processId,
+          process:
+            String(
+              updated.process
+            ),
 
-          startTime:
+          startTimestamp:
             updated.startTimestamp
               .toISOString(),
 
-          endTime:
+          endTimestamp:
             updated.endTimestamp
               .toISOString(),
 
-          duration:
-            updated.duration
+          createdAt:
+            updated.createdAt
+              ? updated.createdAt
+                  .toISOString()
+              : null,
+
+          updatedAt:
+            updated.updatedAt
+              ? updated.updatedAt
+                  .toISOString()
+              : null
+
         }
+
       });
 
     } catch (error) {
 
       console.error(
-        "PROCESS RECORD UPDATE ERROR:",
+        "PROCESS PIECE RECORD UPDATE ERROR:",
         error
       );
 
       return res.status(500).json({
+
         success: false,
+
         message:
           error.message
+
       });
+
     }
-  }
-);
 
-/* =========================================================
-   DELETE PROCESS RECORD
-========================================================= */
-
-app.delete(
-  "/api/process-records/:id",
-  async (
-    req,
-    res
-  ) => {
-
-    try {
-
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          req.params.id
-        )
-      ) {
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid record id"
-        });
-      }
-
-      const deleted =
-        await ProcessRecord
-          .findByIdAndDelete(
-            req.params.id
-          );
-
-      if (!deleted) {
-
-        return res.status(404).json({
-          success: false,
-          message:
-            "Record not found"
-        });
-      }
-
-      return res.json({
-
-        success: true,
-
-        message:
-          "Record deleted"
-      });
-
-    } catch (error) {
-
-      console.error(
-        "PROCESS RECORD DELETE ERROR:",
-        error
-      );
-
-      return res.status(500).json({
-        success: false,
-        message:
-          error.message
-      });
-    }
   }
 );
 
@@ -2334,6 +2179,7 @@ app.get(
         "index.html"
       )
     );
+
   }
 );
 
@@ -2367,7 +2213,9 @@ app.use(
 
           message:
             "API route not found"
+
         });
+
     }
 
     res
@@ -2375,6 +2223,7 @@ app.use(
       .send(
         "Not found"
       );
+
   }
 );
 
@@ -2404,7 +2253,9 @@ app.use(
         message:
           error.message ||
           "Server error"
+
       });
+
   }
 );
 
@@ -2415,24 +2266,6 @@ app.use(
 async function startServer() {
 
   try {
-
-    console.log("");
-
-    console.log(
-      "======================================"
-    );
-
-    console.log(
-      "       FACTORY APP SERVER"
-    );
-
-    console.log(
-      "======================================"
-    );
-
-    console.log(
-      "Mongo target: 35.198.147.153:27018 / garment"
-    );
 
     await mongoose.connect(
       MONGODB_URI,
@@ -2461,11 +2294,8 @@ async function startServer() {
 
         retryWrites:
           false
-      }
-    );
 
-    console.log(
-      "MongoDB connected successfully"
+      }
     );
 
     app.listen(
@@ -2476,6 +2306,7 @@ async function startServer() {
         console.log(
           `Server running on http://localhost:${PORT}`
         );
+
       }
     );
 
@@ -2487,7 +2318,9 @@ async function startServer() {
     );
 
     process.exit(1);
+
   }
+
 }
 
 startServer();
