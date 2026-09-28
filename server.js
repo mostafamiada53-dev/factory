@@ -498,26 +498,30 @@ app.get(
       const freshnessMs =
         5000;
 
-      const latest =
-        await CurrentReading
-          .findOne(
-            {
-              "metadata.deviceMac":
-                deviceMac
-            },
-            {
-              timestamp: 1,
-              samples: 1,
-              sampleIntervalMs: 1,
-              sampleCount: 1,
-              receivedAt: 1
-            }
-          )
-          .sort({
-            timestamp: -1,
-            _id: -1
-          })
-          .lean();
+const readings =
+  await CurrentReading
+    .find(
+      {
+        "metadata.deviceMac":
+          deviceMac
+      },
+      {
+        timestamp: 1,
+        samples: 1,
+        sampleIntervalMs: 1,
+        sampleCount: 1,
+        receivedAt: 1
+      }
+    )
+    .sort({
+      timestamp: -1,
+      _id: -1
+    })
+    .skip(1)
+    .limit(1)
+    .lean();
+
+const latest = readings[0] || null;
 
       if (!latest) {
 
