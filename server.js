@@ -50,20 +50,32 @@ const PROCESS_NAMES = {
   PC0044: "تثبيت+رد بطانه جيب العمله",
   PC0353: "تكمله بطانه من اسفل *2",
   PC0183: "تكمله تركيب زاويه الموصرة من اسفل *2",
+
   PD0221: "تعريش + قلب قلاب زوايا *2",
+
   PC0219: "مللى سحري جيب عمله + قص فورد",
   PC0089: "داخلى جيب عمله يدوى (على الصدر او الخياله)",
   PC0020: "تركيب بطانه+مللى علوى جيب عمله",
+
   PC0171: "تركيب خياله الصدر سنجل بزاويه قائمه *2",
+
   PD0188: "تنشين داخلي قلاب *2",
+
   PC0041: "تركيب خيالات الصدر سنجل بزاويه قائمه *2",
+
   PD0020: "داخلى قلاب (ابرة واحدة) *2",
+
   PC0001: "زاويه شق جيب العمله+مللى سفلى",
+
   PA0244: "تثبيت سوسته الخياله مع الجنب اتجاه",
+
   PB0230: "حليه منتصف الجيب الخلفي *2",
+
   PC0352: "مللى تركيب بطانه على الفودرة+تثبيت",
+
   PC0042: "ثنى جيب عمله ابرة واحدة (عاديه)"
 };
+
 /* =========================================================
    CURRENT READING MODEL
 ========================================================= */
@@ -95,38 +107,68 @@ const currentReadingSchema = new mongoose.Schema(
     },
 
     sampleIntervalMs: Number,
+
     packetEndTimestamp: Date,
+
     sampleCount: Number,
 
     context: {
       deviceStatus: Number,
+
       statusLastUpdatedAt: Date,
-      operatorId: mongoose.Schema.Types.ObjectId,
-      activeEmployeeIds: [mongoose.Schema.Types.ObjectId],
-      lastBeatOrderId: mongoose.Schema.Types.ObjectId,
+
+      operatorId:
+        mongoose.Schema.Types.ObjectId,
+
+      activeEmployeeIds: [
+        mongoose.Schema.Types.ObjectId
+      ],
+
+      lastBeatOrderId:
+        mongoose.Schema.Types.ObjectId,
+
       lastLoginTimestamp: Date,
+
       lastOpenIdleTimeTimestamp: Date,
 
       assignments: [
         {
-          styleId: mongoose.Schema.Types.ObjectId,
-          orderId: mongoose.Schema.Types.ObjectId,
-          processIds: [mongoose.Schema.Types.Mixed],
-          standardProcessIds: [mongoose.Schema.Types.Mixed],
-          standardProcessCodes: [String],
-          processesPerScan: mongoose.Schema.Types.Mixed,
-          processScanSequence: mongoose.Schema.Types.Mixed
+          styleId:
+            mongoose.Schema.Types.ObjectId,
+
+          orderId:
+            mongoose.Schema.Types.ObjectId,
+
+          processIds:
+            [mongoose.Schema.Types.Mixed],
+
+          standardProcessIds:
+            [mongoose.Schema.Types.Mixed],
+
+          standardProcessCodes:
+            [String],
+
+          processesPerScan:
+            mongoose.Schema.Types.Mixed,
+
+          processScanSequence:
+            mongoose.Schema.Types.Mixed
         }
       ]
     },
 
     sourceTopic: String,
+
     sampleRateHz: Number,
+
     samples: [Number],
+
     receivedAt: Date
   },
+
   {
-    collection: "device_current_readings"
+    collection:
+      "device_current_readings"
   }
 );
 
@@ -136,50 +178,66 @@ currentReadingSchema.index(
     timestamp: 1
   },
   {
-    name: "deviceMac_timestamp_idx"
+    name:
+      "deviceMac_timestamp_idx"
   }
 );
 
-const CurrentReading = mongoose.model(
-  "CurrentReading",
-  currentReadingSchema
-);
+const CurrentReading =
+  mongoose.model(
+    "CurrentReading",
+    currentReadingSchema
+  );
 
 /* =========================================================
    PROCESS PIECE RECORD MODEL
 ========================================================= */
 
-const processRecordSchema = new mongoose.Schema(
-  {
-    machine: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      index: true
+const processRecordSchema =
+  new mongoose.Schema(
+    {
+      machine: {
+        type:
+          mongoose.Schema.Types.ObjectId,
+
+        required: true,
+
+        index: true
+      },
+
+      process: {
+        type:
+          mongoose.Schema.Types.ObjectId,
+
+        required: true,
+
+        index: true
+      },
+
+      startTimestamp: {
+        type: Date,
+
+        required: true,
+
+        index: true
+      },
+
+      endTimestamp: {
+        type: Date,
+
+        required: true,
+
+        index: true
+      }
     },
 
-    process: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      index: true
-    },
+    {
+      collection:
+        "process_piece_records",
 
-    startTimestamp: {
-      type: Date,
-      required: true,
-      index: true
-    },
-
-    endTimestamp: {
-      type: Date,
-      required: true,
-      index: true
+      timestamps: true
     }
-  },
-  {
-    collection: "process_piece_records",
-    timestamps: true
-  }
-);
+  );
 
 processRecordSchema.index({
   machine: 1,
@@ -202,54 +260,80 @@ processRecordSchema.index({
   startTimestamp: -1
 });
 
-const ProcessRecord = mongoose.model(
-  "ProcessRecord",
-  processRecordSchema
-);
+const ProcessRecord =
+  mongoose.model(
+    "ProcessRecord",
+    processRecordSchema
+  );
 
 /* =========================================================
    HELPERS
 ========================================================= */
 
 function normalizeMac(value) {
+
   return String(value || "")
     .trim()
     .toUpperCase();
+
 }
 
 function isValidDate(date) {
+
   return /^\d{4}-\d{2}-\d{2}$/.test(
     String(date || "")
   );
+
 }
 
-function cairoOffsetMinutes(utcDate) {
-  const parts = new Intl.DateTimeFormat(
-    "en-US",
-    {
-      timeZone: "Africa/Cairo",
-      timeZoneName: "longOffset",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: "h23"
-    }
-  ).formatToParts(utcDate);
+function cairoOffsetMinutes(
+  utcDate
+) {
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone:
+          "Africa/Cairo",
+
+        timeZoneName:
+          "longOffset",
+
+        year: "numeric",
+
+        month: "2-digit",
+
+        day: "2-digit",
+
+        hour: "2-digit",
+
+        minute: "2-digit",
+
+        second: "2-digit",
+
+        hourCycle: "h23"
+      }
+    ).formatToParts(
+      utcDate
+    );
 
   const zone =
     parts.find(
-      p => p.type === "timeZoneName"
-    )?.value || "GMT+02:00";
+      p =>
+        p.type ===
+        "timeZoneName"
+    )?.value ||
+    "GMT+02:00";
 
   const match =
     zone.match(
       /GMT([+-])(\d{2}):(\d{2})/
     );
 
-  if (!match) return 120;
+  if (!match) {
+    return 120;
+  }
 
   const sign =
     match[1] === "+"
@@ -263,11 +347,21 @@ function cairoOffsetMinutes(utcDate) {
       Number(match[3])
     )
   );
+
 }
 
-function cairoLocalDateToUTC(dateString) {
-  const [year, month, day] =
-    dateString.split("-").map(Number);
+function cairoLocalDateToUTC(
+  dateString
+) {
+
+  const [
+    year,
+    month,
+    day
+  ] =
+    dateString
+      .split("-")
+      .map(Number);
 
   const approximation =
     new Date(
@@ -289,85 +383,123 @@ function cairoLocalDateToUTC(dateString) {
 
   return new Date(
     approximation.getTime() -
-      offsetMinutes * 60 * 1000
+    offsetMinutes * 60 * 1000
   );
+
 }
 
 function getDayRange(date) {
+
   if (!isValidDate(date)) {
+
     throw new Error(
       "date must be YYYY-MM-DD"
     );
+
   }
 
   const start =
-    cairoLocalDateToUTC(date);
+    cairoLocalDateToUTC(
+      date
+    );
 
   const nextDay =
     new Date(
       start.getTime() +
-        24 * 60 * 60 * 1000
+      24 *
+      60 *
+      60 *
+      1000
     );
 
   const endOffsetMinutes =
-    cairoOffsetMinutes(nextDay);
+    cairoOffsetMinutes(
+      nextDay
+    );
 
   const end =
     new Date(
       nextDay.getTime() -
-        (
-          endOffsetMinutes -
-          cairoOffsetMinutes(start)
-        ) *
-          60 *
-          1000
+      (
+        endOffsetMinutes -
+        cairoOffsetMinutes(
+          start
+        )
+      ) *
+      60 *
+      1000
     );
 
   return {
     start,
     end
   };
+
 }
 
-function machineCodeFromMac(mac) {
+function machineCodeFromMac(
+  mac
+) {
+
   const normalized =
     normalizeMac(mac);
 
   for (
-    const [code, machine]
-    of Object.entries(MACHINES)
+    const [
+      code,
+      machine
+    ]
+    of Object.entries(
+      MACHINES
+    )
   ) {
+
     if (
-      normalizeMac(machine.mac) ===
+      normalizeMac(
+        machine.mac
+      ) ===
       normalized
     ) {
+
       return code;
+
     }
+
   }
 
   return null;
+
 }
 
-function cleanProcessId(value) {
+function cleanProcessId(
+  value
+) {
+
   if (
     value === null ||
     value === undefined
   ) {
+
     return null;
+
   }
 
   if (
     typeof value === "object" &&
     value !== null &&
-    value._bsontype === "ObjectID"
+    value._bsontype ===
+      "ObjectID"
   ) {
+
     return String(value);
+
   }
 
   const text =
     String(value).trim();
 
   return text || null;
+
 }
 
 function addProcess(
@@ -375,10 +507,15 @@ function addProcess(
   processId,
   processName = ""
 ) {
-  const id =
-    cleanProcessId(processId);
 
-  if (!id) return;
+  const id =
+    cleanProcessId(
+      processId
+    );
+
+  if (!id) {
+    return;
+  }
 
   const name =
     String(
@@ -387,42 +524,64 @@ function addProcess(
     PROCESS_NAMES[id] ||
     "";
 
-  if (!map.has(id)) {
-    map.set(id, {
-      processId: id,
-      name
-    });
+  if (
+    !map.has(id)
+  ) {
+
+    map.set(
+      id,
+      {
+        processId: id,
+        name
+      }
+    );
+
   } else if (
     !map.get(id).name &&
     name
   ) {
-    map.get(id).name = name;
+
+    map.get(id).name =
+      name;
+
   }
+
 }
 
 function calculateDuration(
   start,
   end
 ) {
+
   const s =
-    new Date(start).getTime();
+    new Date(
+      start
+    ).getTime();
 
   const e =
-    new Date(end).getTime();
+    new Date(
+      end
+    ).getTime();
 
   if (
     !Number.isFinite(s) ||
     !Number.isFinite(e)
   ) {
+
     throw new Error(
       "Invalid start or end time"
     );
+
   }
 
-  if (e <= s) {
+  if (
+    e <= s
+  ) {
+
     throw new Error(
       "END must be after START"
     );
+
   }
 
   return Number(
@@ -431,6 +590,7 @@ function calculateDuration(
       1000
     ).toFixed(3)
   );
+
 }
 
 /* =========================================================
@@ -445,20 +605,28 @@ app.get(
   ) => {
 
     res.json({
+
       success: true,
-      server: "FACTORY APP",
+
+      server:
+        "FACTORY APP",
 
       mongoState:
-        mongoose.connection.readyState,
+        mongoose
+          .connection
+          .readyState,
 
       mongoStateText:
-        mongoose.connection
+        mongoose
+          .connection
           .readyState === 1
           ? "connected"
           : "not-connected",
 
       time:
-        new Date().toISOString()
+        new Date()
+          .toISOString()
+
     });
 
   }
@@ -484,11 +652,16 @@ app.get(
 
       if (!deviceMac) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "deviceMac is required"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "deviceMac is required"
+
+          });
 
       }
 
@@ -498,38 +671,47 @@ app.get(
       const freshnessMs =
         5000;
 
-const readings =
-  await CurrentReading
-    .find(
-      {
-        "metadata.deviceMac":
-          deviceMac
-      },
-      {
-        timestamp: 1,
-        samples: 1,
-        sampleIntervalMs: 1,
-        sampleCount: 1,
-        receivedAt: 1
-      }
-    )
-    .sort({
-      timestamp: -1,
-      _id: -1
-    })
-    .skip(1)
-    .limit(1)
-    .lean();
+      const readings =
+        await CurrentReading
+          .find(
+            {
+              "metadata.deviceMac":
+                deviceMac
+            },
+            {
+              timestamp: 1,
+              samples: 1,
+              sampleIntervalMs: 1,
+              sampleCount: 1,
+              receivedAt: 1
+            }
+          )
+          .sort({
+            timestamp: -1,
+            _id: -1
+          })
+          .skip(1)
+          .limit(1)
+          .lean();
 
-const latest = readings[0] || null;
+      const latest =
+        readings[0] ||
+        null;
 
       if (!latest) {
 
         return res.json({
+
           success: true,
-          hasCurrentReading: false,
-          isFresh: false,
+
+          hasCurrentReading:
+            false,
+
+          isFresh:
+            false,
+
           points: []
+
         });
 
       }
@@ -571,12 +753,12 @@ const latest = readings[0] || null;
             time:
               new Date(
                 baseTimestamp -
-                  (
-                    samples.length -
-                    1 -
-                    index
-                  ) *
-                    interval
+                (
+                  samples.length -
+                  1 -
+                  index
+                ) *
+                  interval
               ).toISOString(),
 
             current:
@@ -645,18 +827,25 @@ const latest = readings[0] || null;
 
       });
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "CURRENT WAVE ERROR:",
         error
       );
 
-      return res.status(500).json({
-        success: false,
-        message:
-          error.message
-      });
+      return res
+        .status(500)
+        .json({
+
+          success: false,
+
+          message:
+            error.message
+
+        });
 
     }
 
@@ -682,7 +871,11 @@ app.get(
           ""
         ).trim();
 
-      if (!isValidDate(date)) {
+      if (
+        !isValidDate(
+          date
+        )
+      ) {
 
         return res
           .status(400)
@@ -709,7 +902,9 @@ app.get(
         start,
         end
       } =
-        getDayRange(date);
+        getDayRange(
+          date
+        );
 
       const groupedDevices =
         await CurrentReading.aggregate(
@@ -730,9 +925,11 @@ app.get(
                         end
 
                     }
+
                   },
 
                   {
+
                     timestamp:
                       null,
 
@@ -745,11 +942,13 @@ app.get(
                         end
 
                     }
+
                   }
 
                 ]
 
               }
+
             },
 
             {
@@ -762,6 +961,7 @@ app.get(
                   "$context.assignments"
 
               }
+
             },
 
             {
@@ -770,14 +970,16 @@ app.get(
                 deviceMac: {
 
                   $in:
-                    Object.values(
-                      MACHINES
-                    ).map(
-                      machine =>
-                        normalizeMac(
-                          machine.mac
-                        )
-                    )
+                    Object
+                      .values(
+                        MACHINES
+                      )
+                      .map(
+                        machine =>
+                          normalizeMac(
+                            machine.mac
+                          )
+                      )
 
                 }
 
@@ -869,6 +1071,7 @@ app.get(
             }
 
           ],
+
           {
             allowDiskUse:
               true
@@ -896,8 +1099,12 @@ app.get(
             mac
           );
 
-        if (!machineCode) {
+        if (
+          !machineCode
+        ) {
+
           continue;
+
         }
 
         const machine =
@@ -986,7 +1193,8 @@ app.get(
               )
           );
 
-      const finalProcesses = {};
+      const finalProcesses =
+        {};
 
       for (
         const machine
@@ -1034,7 +1242,9 @@ app.get(
 
       });
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "HISTORICAL OPTIONS ERROR:",
@@ -1067,7 +1277,7 @@ app.get(
 
 /* =========================================================
    HISTORICAL WAVE
-   FILTER BY MACHINE + DATE + PROCESS
+   RAW SAMPLES - NO AVG / NO BUCKETING
 ========================================================= */
 
 app.get(
@@ -1096,169 +1306,93 @@ app.get(
           ""
         ).trim();
 
-      /* ---------------------------------------------------
-         VALIDATION
-      --------------------------------------------------- */
-
       if (!deviceMac) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "deviceMac is required"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "deviceMac is required"
+
+          });
 
       }
 
-      if (!isValidDate(date)) {
+      if (
+        !isValidDate(
+          date
+        )
+      ) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "date must be YYYY-MM-DD"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "date must be YYYY-MM-DD"
+
+          });
 
       }
 
       if (!processCode) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "processCode is required"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "processCode is required"
+
+          });
 
       }
-
-      /* ---------------------------------------------------
-         DAY RANGE
-      --------------------------------------------------- */
 
       const {
         start,
         end
       } =
-        getDayRange(date);
-
-      /* ---------------------------------------------------
-         RESOLUTION
-      --------------------------------------------------- */
-
-      const requestedResolution =
-        Number(
-          req.query.resolution ||
-          req.query.maxPoints ||
-          0
+        getDayRange(
+          date
         );
 
       /* ---------------------------------------------------
-         COUNT READINGS FOR PROCESS
+         GET ORIGINAL READINGS
+
+         IMPORTANT:
+         NO $avg
+         NO $group
+         NO BUCKETING
+
+         Every sample is returned.
       --------------------------------------------------- */
 
-      const count =
-        await CurrentReading.countDocuments({
+      const readings =
+        await CurrentReading
+          .find(
+            {
 
-          "metadata.deviceMac":
-            deviceMac,
+              "metadata.deviceMac":
+                deviceMac,
 
-          timestamp: {
-            $gte: start,
-            $lt: end
-          },
+              timestamp: {
 
-          "context.assignments": {
+                $gte:
+                  start,
 
-            $elemMatch: {
+                $lt:
+                  end
 
-              standardProcessCodes:
-                processCode
+              },
 
-            }
-
-          }
-
-        });
-
-      /* ---------------------------------------------------
-         BUCKET SIZE
-      --------------------------------------------------- */
-
-      let bucketSeconds;
-
-      if (
-        Number.isFinite(
-          requestedResolution
-        ) &&
-        requestedResolution >= 1 &&
-        requestedResolution <= 3600
-      ) {
-
-        bucketSeconds =
-          requestedResolution;
-
-      } else {
-
-        if (count <= 2000) {
-
-          bucketSeconds = 1;
-
-        } else if (count <= 10000) {
-
-          bucketSeconds = 5;
-
-        } else if (count <= 30000) {
-
-          bucketSeconds = 10;
-
-        } else if (count <= 100000) {
-
-          bucketSeconds = 30;
-
-        } else {
-
-          bucketSeconds = 60;
-
-        }
-
-      }
-
-      const bucketMs =
-        bucketSeconds * 1000;
-
-      /* ---------------------------------------------------
-         HISTORICAL PIPELINE
-      --------------------------------------------------- */
-
-      const pipeline = [
-
-        /* MACHINE + DATE */
-
-        {
-          $match: {
-
-            "metadata.deviceMac":
-              deviceMac,
-
-            timestamp: {
-
-              $gte: start,
-
-              $lt: end
-
-            }
-
-          }
-
-        },
-
-        /* SELECTED PROCESS */
-
-        {
-          $match: {
-
-            "context.assignments":
-
-              {
+              "context.assignments": {
 
                 $elemMatch: {
 
@@ -1269,185 +1403,147 @@ app.get(
 
               }
 
-          }
+            },
 
-        },
+            {
 
-        /* CURRENT VALUE */
+              timestamp: 1,
 
-        {
-          $project: {
+              samples: 1,
+
+              sampleIntervalMs: 1,
+
+              sampleCount: 1,
+
+              receivedAt: 1
+
+            }
+
+          )
+          .sort({
 
             timestamp: 1,
 
-            avgValue: {
-
-              $avg:
-                "$samples"
-
-            }
-
-          }
-
-        },
-
-        /* REMOVE INVALID VALUES */
-
-        {
-          $match: {
-
-            avgValue: {
-
-              $ne: null
-
-            }
-
-          }
-
-        },
-
-        /* TIME BUCKET */
-
-        {
-          $project: {
-
-            relativeBucket: {
-
-              $floor: {
-
-                $divide: [
-
-                  {
-
-                    $subtract: [
-
-                      "$timestamp",
-
-                      start
-
-                    ]
-
-                  },
-
-                  bucketMs
-
-                ]
-
-              }
-
-            },
-
-            avgValue: 1
-
-          }
-
-        },
-
-        /* GROUP */
-
-        {
-          $group: {
-
-            _id:
-              "$relativeBucket",
-
-            avgValue: {
-
-              $avg:
-                "$avgValue"
-
-            }
-
-          }
-
-        },
-
-        /* SORT */
-
-        {
-          $sort: {
-
             _id: 1
 
-          }
+          })
+          .lean();
 
-        },
+      /* ---------------------------------------------------
+         CONVERT EVERY RAW SAMPLE TO A POINT
+      --------------------------------------------------- */
 
-        /* FINAL POINT */
+      const points = [];
 
-        {
-          $project: {
+      for (
+        const reading
+        of readings
+      ) {
 
-            _id: 0,
+        const samples =
+          Array.isArray(
+            reading.samples
+          )
+            ? reading.samples
+            : [];
 
-            timestamp: {
+        if (
+          !samples.length
+        ) {
 
-              $dateAdd: {
-
-                startDate:
-                  start,
-
-                unit:
-                  "millisecond",
-
-                amount: {
-
-                  $multiply: [
-
-                    "$_id",
-
-                    bucketMs
-
-                  ]
-
-                }
-
-              }
-
-            },
-
-            current:
-              "$avgValue"
-
-          }
+          continue;
 
         }
 
-      ];
+        const baseTimestamp =
+          reading.timestamp
+            ? new Date(
+                reading.timestamp
+              ).getTime()
+            : reading.receivedAt
+              ? new Date(
+                  reading.receivedAt
+                ).getTime()
+              : null;
 
-      const rows =
-        await CurrentReading
-          .aggregate(
-            pipeline
+        if (
+          !Number.isFinite(
+            baseTimestamp
           )
-          .allowDiskUse(true)
-          .option({
-            maxTimeMS: 60000
+        ) {
+
+          continue;
+
+        }
+
+        const interval =
+          Number(
+            reading.sampleIntervalMs
+          ) > 0
+            ? Number(
+                reading.sampleIntervalMs
+              )
+            : 100;
+
+        for (
+          let index = 0;
+          index <
+            samples.length;
+          index++
+        ) {
+
+          const value =
+            Number(
+              samples[index]
+            );
+
+          if (
+            !Number.isFinite(
+              value
+            )
+          ) {
+
+            continue;
+
+          }
+
+          const sampleTimestamp =
+            baseTimestamp -
+            (
+              samples.length -
+              1 -
+              index
+            ) *
+              interval;
+
+          points.push({
+
+            time:
+              new Date(
+                sampleTimestamp
+              ).toISOString(),
+
+            current:
+              value
+
           });
 
-      const points =
-        rows
-          .map(
-            row => ({
+        }
 
-              time:
-                new Date(
-                  row.timestamp
-                ).toISOString(),
+      }
 
-              current:
-                Number(
-                  row.current
-                )
-
-            })
-          )
-          .filter(
-            point =>
-              Number.isFinite(
-                point.current
-              )
-          );
+      points.sort(
+        (
+          a,
+          b
+        ) =>
+          new Date(
+            a.time
+          ).getTime() -
+          new Date(
+            b.time
+          ).getTime()
+      );
 
       return res.json({
 
@@ -1460,9 +1556,7 @@ app.get(
         processCode,
 
         packetCount:
-          count,
-
-        bucketSeconds,
+          readings.length,
 
         pointCount:
           points.length,
@@ -1471,21 +1565,25 @@ app.get(
 
       });
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "HISTORICAL WAVE ERROR:",
         error
       );
 
-      return res.status(500).json({
+      return res
+        .status(500)
+        .json({
 
-        success: false,
+          success: false,
 
-        message:
-          error.message
+          message:
+            error.message
 
-      });
+        });
 
     }
 
@@ -1506,7 +1604,8 @@ app.post(
     try {
 
       const body =
-        req.body || {};
+        req.body ||
+        {};
 
       const machine =
         String(
@@ -1526,27 +1625,33 @@ app.post(
       const endTimestamp =
         body.endTimestamp;
 
-      /* ---------------------------------------------------
-         VALIDATION
-      --------------------------------------------------- */
-
       if (!machine) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "machine is required"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "machine is required"
+
+          });
 
       }
 
       if (!process) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "process is required"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "process is required"
+
+          });
 
       }
 
@@ -1555,11 +1660,16 @@ app.post(
         !endTimestamp
       ) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "startTimestamp and endTimestamp are required"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "startTimestamp and endTimestamp are required"
+
+          });
 
       }
 
@@ -1582,11 +1692,16 @@ app.post(
         )
       ) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid startTimestamp or endTimestamp"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "Invalid startTimestamp or endTimestamp"
+
+          });
 
       }
 
@@ -1595,17 +1710,18 @@ app.post(
         start.getTime()
       ) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "endTimestamp must be after startTimestamp"
-        });
+        return res
+          .status(400)
+          .json({
+
+            success: false,
+
+            message:
+              "endTimestamp must be after startTimestamp"
+
+          });
 
       }
-
-      /* ---------------------------------------------------
-         SAVE RECORD
-      --------------------------------------------------- */
 
       const record =
         await ProcessRecord.create({
@@ -1622,71 +1738,78 @@ app.post(
 
         });
 
-      /* ---------------------------------------------------
-         RESPONSE
-      --------------------------------------------------- */
+      return res
+        .status(201)
+        .json({
 
-      return res.status(201).json({
+          success: true,
 
-        success: true,
+          data: {
 
-        data: {
+            _id:
+              String(
+                record._id
+              ),
 
-          _id:
-            String(
-              record._id
-            ),
+            machine:
+              String(
+                record.machine
+              ),
 
-          machine:
-            String(
-              record.machine
-            ),
+            process:
+              String(
+                record.process
+              ),
 
-          process:
-            String(
-              record.process
-            ),
+            startTimestamp:
+              record
+                .startTimestamp
+                .toISOString(),
 
-          startTimestamp:
-            record.startTimestamp
-              .toISOString(),
+            endTimestamp:
+              record
+                .endTimestamp
+                .toISOString(),
 
-          endTimestamp:
-            record.endTimestamp
-              .toISOString(),
+            createdAt:
+              record
+                .createdAt
+                .toISOString(),
 
-          createdAt:
-            record.createdAt
-              .toISOString(),
+            updatedAt:
+              record
+                .updatedAt
+                .toISOString()
 
-          updatedAt:
-            record.updatedAt
-              .toISOString()
+          }
 
-        }
+        });
 
-      });
-
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "PROCESS PIECE RECORD ERROR:",
         error
       );
 
-      return res.status(500).json({
+      return res
+        .status(500)
+        .json({
 
-        success: false,
+          success: false,
 
-        message:
-          error.message
+          message:
+            error.message
 
-      });
+        });
 
     }
 
   }
 );
+
 /* =========================================================
    PROCESS PIECE RECORDS
 ========================================================= */
@@ -1702,10 +1825,6 @@ app.get(
 
       const filter = {};
 
-      /* ---------------------------------------------------
-         MACHINE
-      --------------------------------------------------- */
-
       if (
         req.query.machine
       ) {
@@ -1717,10 +1836,6 @@ app.get(
 
       }
 
-      /* ---------------------------------------------------
-         PROCESS
-      --------------------------------------------------- */
-
       if (
         req.query.process
       ) {
@@ -1731,10 +1846,6 @@ app.get(
           ).trim();
 
       }
-
-      /* ---------------------------------------------------
-         DATE
-      --------------------------------------------------- */
 
       if (
         isValidDate(
@@ -1762,15 +1873,14 @@ app.get(
 
       }
 
-      /* ---------------------------------------------------
-         GET RECORDS
-      --------------------------------------------------- */
-
       const records =
         await ProcessRecord
-          .find(filter)
+          .find(
+            filter
+          )
           .sort({
-            startTimestamp: -1
+            startTimestamp:
+              -1
           })
           .limit(500)
           .lean();
@@ -1799,26 +1909,32 @@ app.get(
                 ),
 
               startTimestamp:
-                record.startTimestamp
-                  ? record.startTimestamp
+                record
+                  .startTimestamp
+                  ? record
+                      .startTimestamp
                       .toISOString()
                   : null,
 
               endTimestamp:
-                record.endTimestamp
-                  ? record.endTimestamp
+                record
+                  .endTimestamp
+                  ? record
+                      .endTimestamp
                       .toISOString()
                   : null,
 
               createdAt:
                 record.createdAt
-                  ? record.createdAt
+                  ? record
+                      .createdAt
                       .toISOString()
                   : null,
 
               updatedAt:
                 record.updatedAt
-                  ? record.updatedAt
+                  ? record
+                      .updatedAt
                       .toISOString()
                   : null
 
@@ -1827,26 +1943,31 @@ app.get(
 
       });
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "PROCESS PIECE RECORDS GET ERROR:",
         error
       );
 
-      return res.status(500).json({
+      return res
+        .status(500)
+        .json({
 
-        success: false,
+          success: false,
 
-        message:
-          error.message
+          message:
+            error.message
 
-      });
+        });
 
     }
 
   }
 );
+
 /* =========================================================
    GET PROCESS PIECE RECORD BY ID
 ========================================================= */
@@ -1866,14 +1987,16 @@ app.get(
         )
       ) {
 
-        return res.status(400).json({
+        return res
+          .status(400)
+          .json({
 
-          success: false,
+            success: false,
 
-          message:
-            "Invalid record id"
+            message:
+              "Invalid record id"
 
-        });
+          });
 
       }
 
@@ -1886,14 +2009,16 @@ app.get(
 
       if (!record) {
 
-        return res.status(404).json({
+        return res
+          .status(404)
+          .json({
 
-          success: false,
+            success: false,
 
-          message:
-            "Record not found"
+            message:
+              "Record not found"
 
-        });
+          });
 
       }
 
@@ -1920,25 +2045,29 @@ app.get(
 
           startTimestamp:
             record.startTimestamp
-              ? record.startTimestamp
+              ? record
+                  .startTimestamp
                   .toISOString()
               : null,
 
           endTimestamp:
             record.endTimestamp
-              ? record.endTimestamp
+              ? record
+                  .endTimestamp
                   .toISOString()
               : null,
 
           createdAt:
             record.createdAt
-              ? record.createdAt
+              ? record
+                  .createdAt
                   .toISOString()
               : null,
 
           updatedAt:
             record.updatedAt
-              ? record.updatedAt
+              ? record
+                  .updatedAt
                   .toISOString()
               : null
 
@@ -1946,26 +2075,31 @@ app.get(
 
       });
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "PROCESS PIECE RECORD GET ERROR:",
         error
       );
 
-      return res.status(500).json({
+      return res
+        .status(500)
+        .json({
 
-        success: false,
+          success: false,
 
-        message:
-          error.message
+          message:
+            error.message
 
-      });
+        });
 
     }
 
   }
 );
+
 /* =========================================================
    UPDATE PROCESS PIECE RECORD
 ========================================================= */
@@ -1985,14 +2119,16 @@ app.put(
         )
       ) {
 
-        return res.status(400).json({
+        return res
+          .status(400)
+          .json({
 
-          success: false,
+            success: false,
 
-          message:
-            "Invalid record id"
+            message:
+              "Invalid record id"
 
-        });
+          });
 
       }
 
@@ -2007,14 +2143,16 @@ app.put(
         !endTimestamp
       ) {
 
-        return res.status(400).json({
+        return res
+          .status(400)
+          .json({
 
-          success: false,
+            success: false,
 
-          message:
-            "startTimestamp and endTimestamp are required"
+            message:
+              "startTimestamp and endTimestamp are required"
 
-        });
+          });
 
       }
 
@@ -2037,14 +2175,16 @@ app.put(
         )
       ) {
 
-        return res.status(400).json({
+        return res
+          .status(400)
+          .json({
 
-          success: false,
+            success: false,
 
-          message:
-            "Invalid startTimestamp or endTimestamp"
+            message:
+              "Invalid startTimestamp or endTimestamp"
 
-        });
+          });
 
       }
 
@@ -2053,14 +2193,16 @@ app.put(
         start.getTime()
       ) {
 
-        return res.status(400).json({
+        return res
+          .status(400)
+          .json({
 
-          success: false,
+            success: false,
 
-          message:
-            "endTimestamp must be after startTimestamp"
+            message:
+              "endTimestamp must be after startTimestamp"
 
-        });
+          });
 
       }
 
@@ -2068,6 +2210,7 @@ app.put(
         await ProcessRecord
           .findByIdAndUpdate(
             req.params.id,
+
             {
               $set: {
 
@@ -2080,23 +2223,29 @@ app.put(
               }
 
             },
+
             {
               new: true,
-              runValidators: true
+
+              runValidators:
+                true
+
             }
           )
           .lean();
 
       if (!updated) {
 
-        return res.status(404).json({
+        return res
+          .status(404)
+          .json({
 
-          success: false,
+            success: false,
 
-          message:
-            "Record not found"
+            message:
+              "Record not found"
 
-        });
+          });
 
       }
 
@@ -2122,22 +2271,26 @@ app.put(
             ),
 
           startTimestamp:
-            updated.startTimestamp
+            updated
+              .startTimestamp
               .toISOString(),
 
           endTimestamp:
-            updated.endTimestamp
+            updated
+              .endTimestamp
               .toISOString(),
 
           createdAt:
             updated.createdAt
-              ? updated.createdAt
+              ? updated
+                  .createdAt
                   .toISOString()
               : null,
 
           updatedAt:
             updated.updatedAt
-              ? updated.updatedAt
+              ? updated
+                  .updatedAt
                   .toISOString()
               : null
 
@@ -2145,21 +2298,25 @@ app.put(
 
       });
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "PROCESS PIECE RECORD UPDATE ERROR:",
         error
       );
 
-      return res.status(500).json({
+      return res
+        .status(500)
+        .json({
 
-        success: false,
+          success: false,
 
-        message:
-          error.message
+          message:
+            error.message
 
-      });
+        });
 
     }
 
@@ -2314,14 +2471,18 @@ async function startServer() {
       }
     );
 
-  } catch (error) {
+  } catch (
+    error
+  ) {
 
     console.error(
       "MongoDB connection failed:",
       error
     );
 
-    process.exit(1);
+    process.exit(
+      1
+    );
 
   }
 
