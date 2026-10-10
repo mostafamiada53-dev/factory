@@ -261,7 +261,6 @@ app.get("/api/health", (req, res) => {
 
 /* =========================================================
    PROCESS PIECE RECORDS (proxy to the public API)
-   مش بيحتاج Mongo متوصل، فحطيناه قبل check الـ 503
 ========================================================= */
 
 function validateRecordBody(body) {
@@ -369,7 +368,7 @@ app.put("/api/process-piece-records/:id", async (req, res) => {
 });
 
 /* =========================================================
-   MONGO CONNECTION CHECK (للـ routes اللي بتقرأ من Mongo)
+   MONGO CONNECTION CHECK 
 ========================================================= */
 
 app.use("/api", (req, res, next) => {
