@@ -10,7 +10,7 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-/* الباسورد لازم يكون في ملف .env بس (MONGODB_URI=...) */
+
 const MONGODB_URI =
   process.env.MONGODB_URI ||
   "mongodb://current_readings:GbvifHLBkEhpsbY4AS@35.198.147.153:27018/garment?authSource=admin&directConnection=true";
